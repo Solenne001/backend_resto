@@ -21,6 +21,8 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const connection = await mysql.createConnection(process.env.DATABASE_URL);
+const db = await mysql.createConnection(process.env.DATABASE_URL);
 
 export default db;
+
+

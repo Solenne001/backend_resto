@@ -1,5 +1,5 @@
 // server/models/client.js
-import db  from "../config/db.js";
+import db from "../config/db.js";
 
 // Créer un client
 export const createClient = async ({ name, table_number, type }) => {
