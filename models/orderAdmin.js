@@ -1,4 +1,4 @@
-import { db } from "../config/db.js";
+import db from "../config/db.js";
 
 // 🔹 Toutes les commandes avec items
 export const getAllOrders = async () => {

@@ -1,5 +1,5 @@
 // server/controllers/dishControllers.js
-import { db } from "../config/db.js";
+import db from "../config/db.js";
 
 // Récupérer tous les plats
 export const getDishes = async (req, res) => {
