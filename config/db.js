@@ -23,4 +23,4 @@ dotenv.config();
 
 const connection = await mysql.createConnection(process.env.DATABASE_URL);
 
-export default connection;
+export default db;
