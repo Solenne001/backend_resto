@@ -5,6 +5,14 @@ import { Server } from "socket.io";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
+import cors from "cors";
+
+app.use(cors({
+  origin: "http://localhost:3000",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
+
 
 // Routes client
 import clientRoutes from "./routes/clientRoutes.js";
