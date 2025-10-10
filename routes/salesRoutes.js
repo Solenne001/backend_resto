@@ -89,4 +89,10 @@ router.get("/orders-per-day", async (req, res) => {
   }
 });
 
+// salesRoutes.js
+router.get("/test", (req, res) => {
+  res.json({ success: true, message: "Route test OK ✅" });
+});
+
+
 export default router;
