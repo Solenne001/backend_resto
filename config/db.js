@@ -21,8 +21,17 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const db = await mysql.createConnection(process.env.DATABASE_URL);
+const db = await mysql.createPool({
+  host: process.env.MYSQLHOST,
+  port: process.env.MYSQLPORT,
+  user: process.env.MYSQLUSER,
+  password: process.env.MYSQLPASSWORD,
+  database: process.env.MYSQLDATABASE,
+  waitForConnections: true,
+  connectionLimit: 10,
+});
 
 export default db;
+
 
 
