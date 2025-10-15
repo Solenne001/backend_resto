@@ -16,6 +16,7 @@
 
 // export default db;
 
+// config/db.js
 import mysql from "mysql2/promise";
 import dotenv from "dotenv";
 
@@ -24,18 +25,14 @@ dotenv.config();
 let db;
 
 try {
-  db = await mysql.createPool({
-    host: process.env.MYSQLHOST,
-    user: process.env.MYSQLUSER,
-    password: process.env.MYSQLPASSWORD,
-    database: process.env.MYSQLDATABASE,
-  });
+  // On utilise la variable d'environnement MYSQL_URL créée dans Railway
+  db = await mysql.createPool(process.env.MYSQL_URL);
 
   // Test de connexion
   const [rows] = await db.query("SELECT 1");
-  console.log("DB connectée avec succès");
+  console.log("DB connectée avec succès !");
 } catch (err) {
-  console.error("Erreur connexion DB:", err);
+  console.error("Erreur connexion DB :", err);
 }
 
 export default db;
