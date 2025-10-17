@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
 
-
+// --------------------- IMPORT DES ROUTES --------------------- //
 // Routes client
 import clientRoutes from "./routes/clientRoutes.js";
 import dishRoutes from "./routes/dishRoutes.js";
@@ -20,8 +20,7 @@ import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import qrRoutes from "./routes/qrRoutes.js";
 
-
-
+// --------------------- CONFIGURATION --------------------- //
 dotenv.config();
 
 const app = express();
@@ -29,19 +28,29 @@ const server = http.createServer(app);
 
 // --------------------- MIDDLEWARE --------------------- //
 app.use(express.json());
-app.use(cors(
-  ({
-  origin: "http://localhost:3000",
+
+// CORS : autoriser le front local + le front hébergé (Vercel)
+app.use(cors({
+  origin: [
+    "https://menuqr-alpha.vercel.app", // ton front en production
+    "http://localhost:3000"            // ton front en local
+  ],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
-})
-));
+}));
+
+// Servir les fichiers statiques (ex : images uploadées)
 app.use("/uploads", express.static(path.join(path.resolve(), "uploads")));
-app.use("/api/qrs", qrRoutes);
 
 // --------------------- SOCKET.IO --------------------- //
 const io = new Server(server, {
-  cors: { origin: "https://menuqr-alpha.vercel.app/" },
+  cors: {
+    origin: [
+      "https://menuqr-alpha.vercel.app",
+      "http://localhost:3000"
+    ],
+    credentials: true
+  },
 });
 
 // Injecter `io` dans chaque requête pour pouvoir l’utiliser dans les routes
@@ -54,15 +63,14 @@ app.use((req, res, next) => {
 io.on("connection", (socket) => {
   console.log("✅ Client connecté :", socket.id);
 
-  // Le client rejoint sa room selon son identifiant (numéro ou nom)
+  // Le client rejoint une room selon son identifiant (numéro ou nom de table)
   socket.on("joinClient", (tableIdentifier) => {
     if (!tableIdentifier) return;
 
-    // Normaliser (pour éviter majuscules, espaces, etc.)
     const normalizedId = String(tableIdentifier).trim().toLowerCase();
     socket.join(`table_${normalizedId}`);
 
-    console.log(`📌 Client "${tableIdentifier}" a rejoint sa room (${normalizedId})`);
+    console.log(`📌 Client "${tableIdentifier}" a rejoint la room (${normalizedId})`);
   });
 
   socket.on("disconnect", () => {
@@ -71,7 +79,6 @@ io.on("connection", (socket) => {
 });
 
 // --------------------- ROUTES --------------------- //
-
 // Routes client
 app.use("/api/client", clientRoutes);
 app.use("/api/dishes", dishRoutes);
@@ -82,14 +89,15 @@ app.use("/api/admin/orders", orderAdminRoutes);
 app.use("/api/admin/sales", salesRoutes);
 app.use("/api/admin/menu", menuRoutes);
 
-// Routes d’authentification
+// Routes d’authentification et QR
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/qrs", qrRoutes);
 
 // --------------------- NOTIFICATION : COMMANDE REÇUE --------------------- //
 app.put("/api/admin/orders/:orderId/received", async (req, res) => {
   const { orderId } = req.params;
-  const { tableNumber } = req.body; // peut être nom ou numéro
+  const { tableNumber } = req.body;
 
   if (!tableNumber) {
     return res.status(400).json({ success: false, message: "Identifiant de table manquant" });
@@ -98,10 +106,9 @@ app.put("/api/admin/orders/:orderId/received", async (req, res) => {
   try {
     const normalizedId = String(tableNumber).trim().toLowerCase();
 
-    // Exemple de commande mise à jour
     const updatedOrder = { id: orderId, order_table: tableNumber, status: "Reçue" };
 
-    // 🔔 Envoi notification via Socket.io
+    // 🔔 Envoi d’une notification au client concerné
     io.to(`table_${normalizedId}`).emit("new_order", {
       message: `✅ Votre commande #${orderId} a été reçue !`,
     });
@@ -112,7 +119,7 @@ app.put("/api/admin/orders/:orderId/received", async (req, res) => {
       message: `Notification envoyée à la table ${tableNumber}`,
     });
   } catch (err) {
-    console.error("❌ Erreur lors de la mise à jour de la commande :", err);
+    console.error("❌ Erreur lors de la notification :", err);
     res.status(500).json({ success: false, message: "Erreur serveur" });
   }
 });
