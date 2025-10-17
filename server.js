@@ -41,7 +41,7 @@ app.use("/api/qrs", qrRoutes);
 
 // --------------------- SOCKET.IO --------------------- //
 const io = new Server(server, {
-  cors: { origin: "*" },
+  cors: { origin: "https://menuqr-alpha.vercel.app/" },
 });
 
 // Injecter `io` dans chaque requête pour pouvoir l’utiliser dans les routes
