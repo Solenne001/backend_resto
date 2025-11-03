@@ -31,39 +31,32 @@ export const markOrderReceived = async (req, res) => {
   try {
     const orderId = req.params.id;
 
-    // 🔸 Mettre à jour le statut dans la base
+    // ✅ Toujours mettre un statut même si on affiche plus
     const updatedOrder = await OrderModel.updateOrderStatus(orderId, "Reçue");
     if (!updatedOrder)
       return res.status(404).json({ success: false, message: "Commande introuvable" });
 
-    // 🔸 Récupérer le numéro de table depuis la commande mise à jour
     const tableNumber =
       updatedOrder.client_table ||
       updatedOrder.order_table ||
       updatedOrder.table_number;
 
-    // 🔸 Vérifie qu’on a bien un numéro de table
-    if (!tableNumber)
-      return res.status(400).json({ success: false, message: "Numéro de table manquant" });
-
-    // 🔸 Envoi de la notification via Socket.IO
-    if (req.io) {
-      req.io.to(`table_${tableNumber}`).emit("new_order", {
-        message: `Votre commande #${orderId} a été reçue ✅`,
+    if (req.io && tableNumber) {
+      req.io.to(`table_${tableNumber}`).emit("order_received", {
+        message: `✅ Votre commande #${orderId} est bien reçue`,
       });
-      console.log(`📢 Notification envoyée à table_${tableNumber}`);
     }
 
     res.status(200).json({
       success: true,
       order: updatedOrder,
-      message: "Commande marquée comme reçue et notification envoyée ✅",
     });
   } catch (err) {
     console.error("❌ markOrderReceived:", err);
     res.status(500).json({ success: false, message: "Erreur serveur" });
   }
 };
+
 //delete d'un mois 
 export const deletePreviousMonth = async (req, res) => {
   try {
