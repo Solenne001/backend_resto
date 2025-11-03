@@ -27,32 +27,37 @@ export const getOrderDetails = async (req, res) => {
 };
 
 // 🔹 Marquer une commande "Reçue" et notifier le client
+
 export const markOrderReceived = async (req, res) => {
   try {
     const orderId = req.params.id;
 
-    // ✅ Toujours mettre un statut même si on affiche plus
-    const updatedOrder = await OrderModel.updateOrderStatus(orderId, "Reçue");
-    if (!updatedOrder)
+    const order = await OrderModel.getOrderDetails(orderId);
+    if (!order)
       return res.status(404).json({ success: false, message: "Commande introuvable" });
 
     const tableNumber =
-      updatedOrder.client_table ||
-      updatedOrder.order_table ||
-      updatedOrder.table_number;
+      order.client_table ||
+      order.order_table ||
+      order.table_number;
 
+    // Émettre l'événement socket dans la room de la table
     if (req.io && tableNumber) {
       req.io.to(`table_${tableNumber}`).emit("order_received", {
-        message: `✅ Votre commande #${orderId} est bien reçue`,
+        orderId,
+        message: `✅ Votre commande #${orderId} a été reçue`,
       });
+      console.log(`📢 Émis order_received -> table_${tableNumber}`);
     }
 
+    // Répondre quand même au front admin
     res.status(200).json({
       success: true,
-      order: updatedOrder,
+      order,
+      message: "Notification envoyée aux clients concernés",
     });
   } catch (err) {
-    console.error("❌ markOrderReceived:", err);
+    console.error("❌ markOrderReceived :", err);
     res.status(500).json({ success: false, message: "Erreur serveur" });
   }
 };
