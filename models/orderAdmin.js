@@ -107,3 +107,33 @@ export const updateOrderStatus = async (orderId, status) => {
     throw err;
   }
 };
+
+// 🔹 Supprimer toutes les commandes du mois précédent
+export const deletePreviousMonthOrders = async () => {
+  const now = new Date();
+  const firstDayCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const firstDayPreviousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+  try {
+    // 🔹 Supprimer les items d’abord pour éviter erreur de contrainte
+    await db.execute(
+      `DELETE oi FROM order_items oi
+       JOIN orders o ON oi.order_id = o.id
+       WHERE o.created_at >= ? AND o.created_at < ?`,
+      [firstDayPreviousMonth, firstDayCurrentMonth]
+    );
+
+    // 🔹 Supprimer ensuite les commandes
+    const [result] = await db.execute(
+      `DELETE FROM orders 
+       WHERE created_at >= ? AND created_at < ?`,
+      [firstDayPreviousMonth, firstDayCurrentMonth]
+    );
+
+    return result.affectedRows;
+  } catch (err) {
+    console.error("❌ deletePreviousMonthOrders:", err);
+    throw err;
+  }
+};
+

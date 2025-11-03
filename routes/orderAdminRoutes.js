@@ -11,5 +11,7 @@ router.get("/:id", getOrderDetails);
 
 // 🔹 Marquer une commande "Reçue"
 router.put("/received/:id", markOrderReceived);
+//delete d'un mois
+router.delete("/clear-previous-month", deletePreviousMonth);
 
 export default router;

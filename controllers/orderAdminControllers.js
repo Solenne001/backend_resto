@@ -64,3 +64,20 @@ export const markOrderReceived = async (req, res) => {
     res.status(500).json({ success: false, message: "Erreur serveur" });
   }
 };
+//delete d'un mois 
+export const deletePreviousMonth = async (req, res) => {
+  try {
+    const deletedCount = await OrderModel.deletePreviousMonthOrders();
+    res.status(200).json({
+      success: true,
+      message: `${deletedCount} commandes supprimées ✅`,
+      deletedCount,
+    });
+  } catch (err) {
+    console.error("❌ deletePreviousMonth:", err);
+    res.status(500).json({
+      success: false,
+      message: "Erreur lors de la suppression",
+    });
+  }
+};
