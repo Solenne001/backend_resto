@@ -29,17 +29,18 @@ const server = http.createServer(app);
 // --------------------- MIDDLEWARE --------------------- //
 app.use(express.json());
 
-// CORS : autoriser le front local + le front hébergé (Vercel)
-app.use(cors({
-  origin: [
-    "https://menuqr-alpha.vercel.app", // ton front en production
-    "http://localhost:3000"            // ton front en local
-  ],
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: [
+      "https://menuqr-alpha.vercel.app",
+      "http://localhost:3000",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
 
-// Servir les fichiers statiques (ex : images uploadées)
+// Servir les images uploadées
 app.use("/uploads", express.static(path.join(path.resolve(), "uploads")));
 
 // --------------------- SOCKET.IO --------------------- //
@@ -47,30 +48,29 @@ const io = new Server(server, {
   cors: {
     origin: [
       "https://menuqr-alpha.vercel.app",
-      "http://localhost:3000"
+      "http://localhost:3000",
     ],
-    credentials: true
+    credentials: true,
   },
 });
 
-// Injecter `io` dans chaque requête pour pouvoir l’utiliser dans les routes
+// Injecter l’instance socket dans les routes
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
 
-// Connexions Socket.io
+// --------------------- SOCKET CONNECTION --------------------- //
 io.on("connection", (socket) => {
   console.log("✅ Client connecté :", socket.id);
 
-  // Le client rejoint une room selon son identifiant (numéro ou nom de table)
   socket.on("joinClient", (tableIdentifier) => {
     if (!tableIdentifier) return;
 
     const normalizedId = String(tableIdentifier).trim().toLowerCase();
     socket.join(`table_${normalizedId}`);
 
-    console.log(`📌 Client "${tableIdentifier}" a rejoint la room (${normalizedId})`);
+    console.log(`📌 Client rejoint → table_${normalizedId}`);
   });
 
   socket.on("disconnect", () => {
@@ -79,38 +79,45 @@ io.on("connection", (socket) => {
 });
 
 // --------------------- ROUTES --------------------- //
-// Routes client
+// Client
 app.use("/api/client", clientRoutes);
 app.use("/api/dishes", dishRoutes);
 app.use("/api/orders", orderRoutes);
 
-// Routes admin
+// Admin
 app.use("/api/admin/orders", orderAdminRoutes);
 app.use("/api/admin/sales", salesRoutes);
 app.use("/api/admin/menu", menuRoutes);
 
-// Routes d’authentification et QR
+// Auth + QR
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/qrs", qrRoutes);
 
-// --------------------- NOTIFICATION : COMMANDE REÇUE --------------------- //
+// --------------------- ADMIN : "COMMANDE REÇUE" --------------------- //
 app.put("/api/admin/orders/:orderId/received", async (req, res) => {
   const { orderId } = req.params;
   const { tableNumber } = req.body;
 
   if (!tableNumber) {
-    return res.status(400).json({ success: false, message: "Identifiant de table manquant" });
+    return res.status(400).json({
+      success: false,
+      message: "Identifiant de table manquant",
+    });
   }
 
   try {
     const normalizedId = String(tableNumber).trim().toLowerCase();
 
-    const updatedOrder = { id: orderId, order_table: tableNumber, status: "Reçue" };
+    const updatedOrder = {
+      id: orderId,
+      order_table: tableNumber,
+      status: "Reçue",
+    };
 
-    // 🔔 Envoi d’une notification au client concerné
-    io.to(`table_${normalizedId}`).emit("new_order", {
+    io.to(`table_${normalizedId}`).emit("order_received", {
       message: `✅ Votre commande #${orderId} a été reçue !`,
+      order: updatedOrder,
     });
 
     res.json({
@@ -120,26 +127,27 @@ app.put("/api/admin/orders/:orderId/received", async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Erreur lors de la notification :", err);
-    res.status(500).json({ success: false, message: "Erreur serveur" });
+    res.status(500).json({
+      success: false,
+      message: "Erreur serveur",
+    });
   }
 });
 
-// --------------------- TEST : NOTIFICATION GLOBALE --------------------- //
+// --------------------- TEST NOTIF GLOBALE --------------------- //
 app.get("/api/test-notification-all", (req, res) => {
-  const fakeOrder = {
-    id: Math.floor(Math.random() * 1000),
-    order_table: "ALL",
-    status: "TEST_NOTIFICATION 🚀",
-  };
-
-  io.emit("order:status-changed", fakeOrder);
+  io.emit("order_received", {
+    message: "📢 Test de notification globale 🚀",
+  });
 
   res.json({
     success: true,
-    message: "Notification envoyée à tous les clients connectés ✅",
+    message: "Notification envoyée à tous les clients ✅",
   });
 });
 
-// --------------------- LANCEMENT DU SERVEUR --------------------- //
+// --------------------- START SERVER --------------------- //
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`🚀 Serveur lancé sur le port ${PORT}`));
+server.listen(PORT, () =>
+  console.log(`🚀 Serveur lancé sur le port ${PORT}`)
+);
