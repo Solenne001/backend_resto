@@ -17,7 +17,7 @@ export const createDish = async (req, res) => {
   try {
     const { name, price, description, image } = req.body;
     const [result] = await db.query(
-      "INSERT INTO menus (name, price, description, image) VALUES (?, ?, ?, ?)",
+      "INSERT INTO menus (name, price, description, photo) VALUES (?, ?, ?, ?)",
       [name, price, description, image]
     );
     res.status(201).json({ success: true, dish: { id: result.insertId, name, price, description, image } });
@@ -33,7 +33,7 @@ export const updateDish = async (req, res) => {
     const { dishId } = req.params;
     const { name, price, description, image } = req.body;
     const [result] = await db.query(
-      "UPDATE menus SET name=?, price=?, description=?, image=? WHERE id=?",
+      "UPDATE menus SET name=?, price=?, description=?, photo=? WHERE id=?",
       [name, price, description, image, dishId]
     );
     if (result.affectedRows === 0)
